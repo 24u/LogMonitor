@@ -1,0 +1,72 @@
+{
+	"notification": {
+
+		"1.": "Please set up Your email profile settings below:",
+
+		"mail": {
+			"host": "",
+			"port": 587,
+			"user": "",
+			"password": "",
+			"to": "",
+			"from": "",
+			"use_tls" : false
+		},
+
+		"2.": "Please set up Your push notification settings below:",
+
+		"push_notification": {
+			"host": "api.pushover.net",
+			"path": "/1/messages.json",
+			"app_token": "Visit pushover.net to get these values.",
+			"user_key": "Visit pushover.net to get these values.",
+			"priority": "0"
+		}
+	},
+
+	"3.": "Define one or more rules what to be searched in logs:",
+
+	"datasets": [{
+			"file_path": "/Library/FileMaker Server/Logs",
+			"file_regex": "Event.*",
+			"subject": "Edna: FileMaker Server Error",
+			"regex_row": ".*Error\t.*",
+			"send_pushnotification": "yes"
+		},
+		{
+			"file_path": "/Library/FileMaker Server/Database Server/bin/",
+			"file_regex": "fmsaseDebug.log",
+			"subject": "Edna: Scripting Engine Error",
+			"regex_row": ".*error\t.*",
+			"send_pushnotification": "yes"
+		},
+		{
+			"file_path": "/Library/FileMaker Server/Logs",
+			"file_regex": "Event.*",
+			"subject": "Edna: Admin Console login failure",
+			"regex_row": ".*Warning\t522.*",
+			"send_pushnotification": "yes"
+		},
+		{
+			"file_path": "/Library/FileMaker Server/Logs",
+			"file_regex": "Event.*",
+			"subject": "Edna: Schedule time limit",
+			"regex_row": ".*Warning\t690.*",
+			"send_pushnotification": "yes"
+		},
+		{
+			"file_path": "/Library/FileMaker Server/Logs",
+			"file_regex": "Event.*",
+			"subject": "Edna: Temporary account lock",
+			"regex_row": ".*Warning\t1049.*",
+			"send_pushnotification": "yes"
+		},
+		{
+			"file_path": "/Library/FileMaker Server/Logs",
+			"file_regex": "Event.*",
+			"subject": "Edna: Scripting Error",
+			"regex_row": ".*Information.*Scripting\\serror.*",
+			"send_pushnotification": "no"
+		}
+	]
+}

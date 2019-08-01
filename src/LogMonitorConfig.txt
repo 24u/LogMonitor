@@ -1,0 +1,44 @@
+{
+	"notification": {
+
+		"1.": "Please set up Your email profile settings below:",
+
+		"mail": {
+			"host": "",
+			"port": 587,
+			"user": "",
+			"password": "",
+			"to": "",
+			"from": "",
+			"use_tls" : false
+		},
+
+		"2.": "Please set up Your push notification settings below:",
+
+		"push_notification": {
+			"host": "api.pushover.net",
+			"path": "/1/messages.json",
+			"app_token": "Visit pushover.net to get these values.",
+			"user_key": "Visit pushover.net to get these values.",
+			"priority": "0"
+		}
+	},
+
+	"3.": "Define one or more rules what to be searched in logs:",
+
+	"datasets": [{
+			"file_path": "/Users/user/LogMonitor/",
+			"file_regex": "Event.*",
+			"subject": "Warning on server awesome.mycompany.com",
+			"regex_row": ".*Warning\\t(?!31).*",
+			"send_pushnotification": "no"
+		},
+		{
+			"file_path": "/Users/user/LogMonitor/",
+			"file_regex": "Event.*",
+			"subject": "Scripting Error on server awesome.mycompany.com",
+			"regex_row": ".*Information.*Scripting\\serror.*",
+			"send_pushnotification": "no"
+		}
+	]
+}
