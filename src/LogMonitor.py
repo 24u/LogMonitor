@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 
-# version 1.0.3.0
+# version 1.0.4.0
 
 import json
 import copy
@@ -310,6 +310,13 @@ def get_platform_eol():
         return "\n"
 
 def send_pushnotification(text, host, path, token, key, priority, title):
+
+    while (text.endswith('\n')):
+        text = text[:-1]
+
+    while (text.find('\n\n\n') != -1):
+        text = text.replace("\n\n\n", "\n\n")
+
     conn = http.client.HTTPConnection(host)
     conn.request("POST", path,
                  urllib.parse.urlencode({
