@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 
-# version 1.0.4.0
+# version 1.0.5.0
 
 import json
 import copy
@@ -124,6 +124,9 @@ class Offsets:
                             print("Out of index")
                             print("Dataset:")
                             print(file)
+                    else:
+                        if file == key:
+                            newOffsets.update(key, 0, "")
 
         for file in files_dict:
             if file not in newOffsets.offsets:
