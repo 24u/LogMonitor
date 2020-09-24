@@ -1,6 +1,22 @@
 #!/usr/local/bin/python3
 
-# version 1.0.5.0
+# version 1.0.6.0
+
+########################
+# Emergency mail CONFIG - when some error occures
+########################
+EM_HOST=""
+EM_PORT=""
+EM_USER=""
+EM_PASSWORD=""
+EM_TO=""
+EM_FROM=""
+EM_USE_TLS=""
+#########################
+
+########
+# DO NOT CHANGE THIS PART
+########
 
 import json
 import copy
@@ -8,9 +24,11 @@ import os
 import re
 import http.client
 import urllib
+import urllib.request
 import smtplib
 import sys
 import logging.handlers
+import traceback
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from email.utils import make_msgid
@@ -60,7 +78,6 @@ class EmailClient(object):
         except Exception as e:
             my_logger.error("Can't send an email notification. Error: {0}.".format(str(e)))
             return False
-
 
 class cMail:
     def __init__(self):
@@ -185,7 +202,8 @@ class cLogMonitor:
     def read_and_parse_config_file(self, config_file_path):
         try:
             with open(config_file_path, "r", encoding="utf-8") as config_file:
-                config = json.loads(config_file.read())
+                config_file_content = config_file.read()
+                config = json.loads(config_file_content.encode().decode('utf-8-sig'))
                 self.mail.host = config["notification"]["mail"]["host"]
                 if 'port' in config["notification"]["mail"]:
                     self.mail.port = config["notification"]["mail"]["port"]
@@ -215,7 +233,11 @@ class cLogMonitor:
 
                     self.datasets.append(newDataset)
         except:
-            my_logger.error("couldn't process config file")
+            #print (traceback.format_exception(*sys.exc_info())[-2:])
+            my_logger.error("couldn't process config file: " + str(traceback.format_exception(*sys.exc_info())[0:]))
+            email = EmailClient(EM_HOST, EM_PORT, EM_USER, EM_PASSWORD, EM_USE_TLS, EM_FROM, EM_TO)
+            email.send_email("couldn't process config file", str(traceback.format_exception(*sys.exc_info())[0:]))
+            quit(0)
 
     def processFiles(self, files, dataset):
 
@@ -223,7 +245,7 @@ class cLogMonitor:
             pattern = re.compile(dataset.regexRow)
         except:
             my_logger.error("cannot parse regular expression in regex_row: " + dataset.regexRow)
-
+            
         offsets_to_update = {}
 
         isDatasetStart = True
