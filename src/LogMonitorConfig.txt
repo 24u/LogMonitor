@@ -5,12 +5,13 @@
 
 		"mail": {
 			"host": "",
-			"port": 587,
+			"port": 465,
 			"user": "",
 			"password": "",
 			"to": "",
 			"from": "",
-			"use_tls" : false
+			"use_tls" : false,
+			"use_ssl" : true
 		},
 
 		"2.": "Please set up Your push notification settings below:",
@@ -27,14 +28,14 @@
 	"3.": "Define one or more rules what to be searched in logs:",
 
 	"datasets": [{
-			"file_path": "/Users/user/LogMonitor/",
+			"file_path": "/Library/FileMaker Server/Logs/",
 			"file_regex": "Event.*",
 			"subject": "Warning on server awesome.mycompany.com",
-			"regex_row": ".*Warning\\t(?!31).*",
+			"regex_row": ".*ToolboxFMSE_crash_Log.*",
 			"send_pushnotification": "no"
 		},
 		{
-			"file_path": "/Users/user/LogMonitor/",
+			"file_path": "/Library/FileMaker Server/Logs/",
 			"file_regex": "Event.*",
 			"subject": "Scripting Error on server awesome.mycompany.com",
 			"regex_row": ".*Information.*Scripting\\serror.*",

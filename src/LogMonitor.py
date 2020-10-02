@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 
-# version 1.0.6.0
+# version 1.0.7.0
 
 ########################
 # Emergency mail CONFIG - when some error occures
@@ -45,7 +45,7 @@ MAX_LOGGING_SIZE = 5000000
 
 
 class EmailClient(object):
-    def __init__(self, server, port, login, password, use_tls, sender, recipient):
+    def __init__(self, server, port, login, password, use_tls, use_ssl, sender, recipient):
         self._server = server
         self._port = port
         self._login = login
@@ -53,6 +53,7 @@ class EmailClient(object):
         self._use_tls = use_tls
         self._sender = sender
         self._recipient = recipient
+        self._use_ssl = use_ssl
 
     def send_email(self, subject, message):
         sender = self._sender
@@ -67,9 +68,16 @@ class EmailClient(object):
         msg["X-Mailer"] = XMAILER_NAME
 
         try:
-            smtp = smtplib.SMTP(self._server, self._port, timeout=30)
+            if self._use_ssl:
+                smtp = smtplib.SMTP_SSL(self._server, self._port, timeout=30)
+                smtp.ehlo()
+                my_logger.info("using ssl")
+            else:
+                smtp = smtplib.SMTP(self._server, self._port, timeout=30)
+            
             if self._use_tls:
                 smtp.starttls()
+                my_logger.info("using tls")
             if self._login and self._password:
                 smtp.login(str(self._login), str(self._password))
             smtp.sendmail(sender, [recipient], msg.as_string())
@@ -90,6 +98,7 @@ class cMail:
         self.subject = ""
         self.mbody = ""
         self.useTls = False
+        self.useSSL = False
 
 
 class cNotification:
@@ -205,14 +214,18 @@ class cLogMonitor:
                 config_file_content = config_file.read()
                 config = json.loads(config_file_content.encode().decode('utf-8-sig'))
                 self.mail.host = config["notification"]["mail"]["host"]
-                if 'port' in config["notification"]["mail"]:
-                    self.mail.port = config["notification"]["mail"]["port"]
                 self.mail.user = config["notification"]["mail"]["user"]
                 self.mail.password = config["notification"]["mail"]["password"]
                 self.mail.sender = config["notification"]["mail"]["from"]
                 self.mail.recipient = config["notification"]["mail"]["to"]
                 if 'use_tls' in config["notification"]["mail"]:
                     self.mail.useTls = config["notification"]["mail"]["use_tls"]
+                if 'use_ssl' in config["notification"]["mail"]:
+                    self.mail.useSSL = config["notification"]["mail"]["use_ssl"]
+                    self.mail.useTls = False
+                    self.mail.port = 465
+                if 'port' in config["notification"]["mail"]:
+                    self.mail.port = config["notification"]["mail"]["port"]
                 self.notification.host = config["notification"]["push_notification"]["host"]
                 self.notification.path = config["notification"]["push_notification"]["path"]
                 self.notification.appToken = config["notification"]["push_notification"]["app_token"]
@@ -240,7 +253,7 @@ class cLogMonitor:
             quit(0)
 
     def processFiles(self, files, dataset):
-
+        
         try:
             pattern = re.compile(dataset.regexRow)
         except:
@@ -372,6 +385,7 @@ if __name__ == "__main__":
     my_logger.addHandler(handler)
 
     try:
+        
         with open(LAST_LINES_FILE_PATH, "x", encoding="utf-8") as file:
             file.write("{}")
     except:
@@ -389,7 +403,7 @@ if __name__ == "__main__":
             my_logger.info("push notification sent")
 
     if len(logMonitor.mail.mbody) > 0:
-        email = EmailClient(logMonitor.mail.host, logMonitor.mail.port, logMonitor.mail.user, logMonitor.mail.password, logMonitor.mail.useTls, logMonitor.mail.sender, logMonitor.mail.recipient)
+        email = EmailClient(logMonitor.mail.host, logMonitor.mail.port, logMonitor.mail.user, logMonitor.mail.password, logMonitor.mail.useTls, logMonitor.mail.useSSL, logMonitor.mail.sender, logMonitor.mail.recipient)
         if email.send_email(logMonitor.mail.subject, logMonitor.mail.mbody):
             logMonitor.offsets.remove_old_and_save(logMonitor.processed_files)
     else:
