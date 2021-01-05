@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 
-# version 1.0.7.0
+# version 1.0.7.3
 
 ########################
 # Emergency mail CONFIG - when some error occures
@@ -12,6 +12,7 @@ EM_PASSWORD=""
 EM_TO=""
 EM_FROM=""
 EM_USE_TLS=""
+EM_USE_SSL=""
 #########################
 
 ########
@@ -218,14 +219,19 @@ class cLogMonitor:
                 self.mail.password = config["notification"]["mail"]["password"]
                 self.mail.sender = config["notification"]["mail"]["from"]
                 self.mail.recipient = config["notification"]["mail"]["to"]
-                if 'use_tls' in config["notification"]["mail"]:
-                    self.mail.useTls = config["notification"]["mail"]["use_tls"]
-                if 'use_ssl' in config["notification"]["mail"]:
-                    self.mail.useSSL = config["notification"]["mail"]["use_ssl"]
-                    self.mail.useTls = False
-                    self.mail.port = 465
                 if 'port' in config["notification"]["mail"]:
                     self.mail.port = config["notification"]["mail"]["port"]
+                if 'use_ssl' in config["notification"]["mail"]:
+                    self.mail.useSSL = config["notification"]["mail"]["use_ssl"]
+                    if self.mail.useSSL:
+                        self.mail.useTls = False
+                        self.mail.port = 465
+                if 'use_tls' in config["notification"]["mail"]:
+                    self.mail.useTls = config["notification"]["mail"]["use_tls"]
+                    if self.mail.useTls:
+                        self.mail.useSSL = False
+                        self.mail.port = 587
+
                 self.notification.host = config["notification"]["push_notification"]["host"]
                 self.notification.path = config["notification"]["push_notification"]["path"]
                 self.notification.appToken = config["notification"]["push_notification"]["app_token"]
@@ -248,7 +254,7 @@ class cLogMonitor:
         except:
             #print (traceback.format_exception(*sys.exc_info())[-2:])
             my_logger.error("couldn't process config file: " + str(traceback.format_exception(*sys.exc_info())[0:]))
-            email = EmailClient(EM_HOST, EM_PORT, EM_USER, EM_PASSWORD, EM_USE_TLS, EM_FROM, EM_TO)
+            email = EmailClient(EM_HOST, EM_PORT, EM_USER, EM_PASSWORD, EM_USE_TLS, EM_USE_SSL, EM_FROM, EM_TO)
             email.send_email("couldn't process config file", str(traceback.format_exception(*sys.exc_info())[0:]))
             quit(0)
 
@@ -393,6 +399,8 @@ if __name__ == "__main__":
 
     logMonitor = cLogMonitor(CONFIG_FILE_PATH)
     logMonitor.processDatasets()
+    was_push_notification_sent = False
+    were_offsets_removed = False
     if len(logMonitor.notification.nbody) > 0:
         res = send_pushnotification(logMonitor.notification.nbody, logMonitor.notification.host, logMonitor.notification.path,
                               logMonitor.notification.appToken, logMonitor.notification.userKey,
@@ -401,12 +409,20 @@ if __name__ == "__main__":
             my_logger.error("push notification error: " + res.reason)
         else:
             my_logger.info("push notification sent")
+            was_push_notification_sent = True
 
+    was_mail_notification_sent = False
     if len(logMonitor.mail.mbody) > 0:
         email = EmailClient(logMonitor.mail.host, logMonitor.mail.port, logMonitor.mail.user, logMonitor.mail.password, logMonitor.mail.useTls, logMonitor.mail.useSSL, logMonitor.mail.sender, logMonitor.mail.recipient)
         if email.send_email(logMonitor.mail.subject, logMonitor.mail.mbody):
             logMonitor.offsets.remove_old_and_save(logMonitor.processed_files)
+            was_mail_notification_sent = True
+            were_offsets_removed = True
     else:
+        logMonitor.offsets.remove_old_and_save(logMonitor.processed_files)
+        were_offsets_removed = True
+
+    if (was_push_notification_sent or was_mail_notification_sent) and not were_offsets_removed:
         logMonitor.offsets.remove_old_and_save(logMonitor.processed_files)
 
     my_logger.info("Done")
