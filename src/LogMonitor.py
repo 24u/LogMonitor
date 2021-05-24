@@ -1,18 +1,18 @@
 #!/usr/local/bin/python3
 
-# version 1.0.7.3
+# version 1.0.7.7
 
 ########################
 # Emergency mail CONFIG - when some error occures
 ########################
-EM_HOST=""
-EM_PORT=""
-EM_USER=""
-EM_PASSWORD=""
-EM_TO=""
-EM_FROM=""
-EM_USE_TLS=""
-EM_USE_SSL=""
+EM_HOST = ""
+EM_PORT = ""
+EM_USER = ""
+EM_PASSWORD = ""
+EM_TO = ""
+EM_FROM = ""
+EM_USE_TLS = ""
+EM_USE_SSL = ""
 #########################
 
 ########
@@ -72,13 +72,11 @@ class EmailClient(object):
             if self._use_ssl:
                 smtp = smtplib.SMTP_SSL(self._server, self._port, timeout=30)
                 smtp.ehlo()
-                my_logger.info("using ssl")
             else:
                 smtp = smtplib.SMTP(self._server, self._port, timeout=30)
-            
+
             if self._use_tls:
                 smtp.starttls()
-                my_logger.info("using tls")
             if self._login and self._password:
                 smtp.login(str(self._login), str(self._password))
             smtp.sendmail(sender, [recipient], msg.as_string())
@@ -87,6 +85,7 @@ class EmailClient(object):
         except Exception as e:
             my_logger.error("Can't send an email notification. Error: {0}.".format(str(e)))
             return False
+
 
 class cMail:
     def __init__(self):
@@ -141,11 +140,17 @@ class Offsets:
             if row_offset != 0:
                 for file in files_dict:
                     if len(files_dict[file]) >= row_offset:
-                        last_line = self.get_last_line(key)
                         try:
-                            if files_dict[file][row_offset] == last_line:
+                            row1 = files_dict[file][row_offset]
+                            row2 = self.get_last_line(key)
+                            index = len(row1)
+                            if len(row1) > len(row2):  # workaround for the extra characters at the end of line
+                                index = len(row2)
+                            if index < 1:
+                                index = 1
+                            if row1[:index] == row2[:index]:
                                 if file != key:
-                                    newOffsets.update(file, row_offset, last_line)
+                                    newOffsets.update(file, row_offset, row2)
                                     newOffsets.update(key, 0, "")
                         except:
                             print("Out of index")
@@ -183,13 +188,13 @@ class Offsets:
     def update(self, file_path, offset, last_line, report=False):
         if report:
             if self.get_row(file_path) != offset and self.get_last_line(file_path) != last_line:
-                 print("updating {}".format(file_path))
+                print("updating {}".format(file_path))
 
         if file_path in self.offsets:
             self.offsets[file_path]["offset"] = offset
             self.offsets[file_path]["last_line"] = last_line
         else:
-            self.offsets[file_path] = {"offset": offset, "last_line": last_line}
+            self.offsets[file_path] = {"offset": offset, "last_line": last_line.replace("\n", "")}
 
     def remove_old_and_save(self, current_files):
         keys = self.offsets.keys()
@@ -252,19 +257,19 @@ class cLogMonitor:
 
                     self.datasets.append(newDataset)
         except:
-            #print (traceback.format_exception(*sys.exc_info())[-2:])
+            # print (traceback.format_exception(*sys.exc_info())[-2:])
             my_logger.error("couldn't process config file: " + str(traceback.format_exception(*sys.exc_info())[0:]))
             email = EmailClient(EM_HOST, EM_PORT, EM_USER, EM_PASSWORD, EM_USE_TLS, EM_USE_SSL, EM_FROM, EM_TO)
             email.send_email("couldn't process config file", str(traceback.format_exception(*sys.exc_info())[0:]))
             quit(0)
 
     def processFiles(self, files, dataset):
-        
+
         try:
             pattern = re.compile(dataset.regexRow)
         except:
             my_logger.error("cannot parse regular expression in regex_row: " + dataset.regexRow)
-            
+
         offsets_to_update = {}
 
         isDatasetStart = True
@@ -353,8 +358,8 @@ def get_platform_eol():
     else:
         return "\n"
 
-def send_pushnotification(text, host, path, token, key, priority, title):
 
+def send_pushnotification(text, host, path, token, key, priority, title):
     while (text.endswith('\n')):
         text = text[:-1]
 
@@ -391,7 +396,7 @@ if __name__ == "__main__":
     my_logger.addHandler(handler)
 
     try:
-        
+
         with open(LAST_LINES_FILE_PATH, "x", encoding="utf-8") as file:
             file.write("{}")
     except:
@@ -402,18 +407,21 @@ if __name__ == "__main__":
     was_push_notification_sent = False
     were_offsets_removed = False
     if len(logMonitor.notification.nbody) > 0:
-        res = send_pushnotification(logMonitor.notification.nbody, logMonitor.notification.host, logMonitor.notification.path,
-                              logMonitor.notification.appToken, logMonitor.notification.userKey,
-                              logMonitor.notification.priority, logMonitor.notification.title)
+        res = send_pushnotification(logMonitor.notification.nbody, logMonitor.notification.host,
+                                    logMonitor.notification.path,
+                                    logMonitor.notification.appToken, logMonitor.notification.userKey,
+                                    logMonitor.notification.priority, logMonitor.notification.title)
         if res.status != 200:
-            my_logger.error("push notification error: " + res.reason)
+            my_logger.error("Push notification error: " + res.reason)
         else:
-            my_logger.info("push notification sent")
+            my_logger.info("Push notification sent")
             was_push_notification_sent = True
 
     was_mail_notification_sent = False
     if len(logMonitor.mail.mbody) > 0:
-        email = EmailClient(logMonitor.mail.host, logMonitor.mail.port, logMonitor.mail.user, logMonitor.mail.password, logMonitor.mail.useTls, logMonitor.mail.useSSL, logMonitor.mail.sender, logMonitor.mail.recipient)
+        email = EmailClient(logMonitor.mail.host, logMonitor.mail.port, logMonitor.mail.user, logMonitor.mail.password,
+                            logMonitor.mail.useTls, logMonitor.mail.useSSL, logMonitor.mail.sender,
+                            logMonitor.mail.recipient)
         if email.send_email(logMonitor.mail.subject, logMonitor.mail.mbody):
             logMonitor.offsets.remove_old_and_save(logMonitor.processed_files)
             was_mail_notification_sent = True
