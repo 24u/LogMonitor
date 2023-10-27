@@ -1,18 +1,19 @@
-#!/usr/bin/python3
+#!/usr/local/bin/python3
+import time
 
-# version 1.0.8.0
+# version 1.0.9.0
 
 ########################
 # Emergency mail CONFIG - when some error occures
 ########################
-EM_HOST=""
-EM_PORT=""
-EM_USER=""
-EM_PASSWORD=""
-EM_TO=""
-EM_FROM=""
-EM_USE_TLS=""
-EM_USE_SSL=""
+EM_HOST = ""
+EM_PORT = ""
+EM_USER = ""
+EM_PASSWORD = ""
+EM_TO = ""
+EM_FROM = ""
+EM_USE_TLS = ""
+EM_USE_SSL = ""
 #########################
 
 ########
@@ -30,8 +31,6 @@ import smtplib
 import sys
 import logging.handlers
 import traceback
-import shutil
-import time
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from email.utils import make_msgid
@@ -87,6 +86,7 @@ class EmailClient(object):
         except Exception as e:
             my_logger.error("Can't send an email notification. Error: {0}.".format(str(e)))
             return False
+
 
 class cMail:
     def __init__(self):
@@ -189,7 +189,7 @@ class Offsets:
     def update(self, file_path, offset, last_line, report=False):
         if report:
             if self.get_row(file_path) != offset and self.get_last_line(file_path) != last_line:
-                 print("updating {}".format(file_path))
+                print("updating {}".format(file_path))
 
         if file_path in self.offsets:
             self.offsets[file_path]["offset"] = offset
@@ -211,31 +211,9 @@ class cLogMonitor:
         self.mail = cMail()
         self.notification = cNotification()
         self.datasets = []
+        self.offsets = Offsets()
         self.processed_files = []
         self.read_and_parse_config_file(config_file_path)
-
-        try:
-            self.offsets = Offsets()
-        except:
-            ts = time.time()
-            backup_filename = LAST_LINES_FILE_PATH + "_corrupted_" + str(ts) + ".txt"
-
-            #: Send notification
-            email = EmailClient(EM_HOST, EM_PORT, EM_USER, EM_PASSWORD, EM_USE_TLS, EM_USE_SSL, EM_FROM, EM_TO)
-            email.send_email("Offsets file is corrupted", "Offsets file has been corrupted and LogMonitor is not able to parse it!\nLogMonitor created backup of this corrupted file {} and recreated new empty file.\n\n It is possible that already reported issues will be reported again.".format(backup_filename))
-
-            #: Create backup of corrupted file
-            shutil.move(LAST_LINES_FILE_PATH, backup_filename)
-
-            #: Create new offsets file
-            try:
-                with open(LAST_LINES_FILE_PATH, "x", encoding="utf-8") as file:
-                    file.write("{}")
-            except:
-                a = "File already exists so do nothing"
-
-
-
 
     def read_and_parse_config_file(self, config_file_path):
         try:
@@ -280,7 +258,7 @@ class cLogMonitor:
 
                     self.datasets.append(newDataset)
         except:
-            #print (traceback.format_exception(*sys.exc_info())[-2:])
+            # print (traceback.format_exception(*sys.exc_info())[-2:])
             my_logger.error("couldn't process config file: " + str(traceback.format_exception(*sys.exc_info())[0:]))
             email = EmailClient(EM_HOST, EM_PORT, EM_USER, EM_PASSWORD, EM_USE_TLS, EM_USE_SSL, EM_FROM, EM_TO)
             email.send_email("couldn't process config file", str(traceback.format_exception(*sys.exc_info())[0:]))
@@ -381,8 +359,8 @@ def get_platform_eol():
     else:
         return "\n"
 
-def send_pushnotification(text, host, path, token, key, priority, title):
 
+def send_pushnotification(text, host, path, token, key, priority, title):
     while (text.endswith('\n')):
         text = text[:-1]
 
@@ -430,9 +408,10 @@ if __name__ == "__main__":
     was_push_notification_sent = False
     were_offsets_removed = False
     if len(logMonitor.notification.nbody) > 0:
-        res = send_pushnotification(logMonitor.notification.nbody, logMonitor.notification.host, logMonitor.notification.path,
-                              logMonitor.notification.appToken, logMonitor.notification.userKey,
-                              logMonitor.notification.priority, logMonitor.notification.title)
+        res = send_pushnotification(logMonitor.notification.nbody, logMonitor.notification.host,
+                                    logMonitor.notification.path,
+                                    logMonitor.notification.appToken, logMonitor.notification.userKey,
+                                    logMonitor.notification.priority, logMonitor.notification.title)
         if res.status != 200:
             my_logger.error("Push notification error: " + res.reason)
         else:
@@ -441,9 +420,13 @@ if __name__ == "__main__":
 
     was_mail_notification_sent = False
     if len(logMonitor.mail.mbody) > 0:
-        email = EmailClient(logMonitor.mail.host, logMonitor.mail.port, logMonitor.mail.user, logMonitor.mail.password, logMonitor.mail.useTls, logMonitor.mail.useSSL, logMonitor.mail.sender, logMonitor.mail.recipient)
+        email = EmailClient(logMonitor.mail.host, logMonitor.mail.port, logMonitor.mail.user, logMonitor.mail.password,
+                            logMonitor.mail.useTls, logMonitor.mail.useSSL, logMonitor.mail.sender,
+                            logMonitor.mail.recipient)
+        # time.sleep(10000) #Debugging
+        logMonitor.offsets.remove_old_and_save(logMonitor.processed_files)
+        # time.sleep(10000) #Debugging
         if email.send_email(logMonitor.mail.subject, logMonitor.mail.mbody):
-            logMonitor.offsets.remove_old_and_save(logMonitor.processed_files)
             was_mail_notification_sent = True
             were_offsets_removed = True
     else:
