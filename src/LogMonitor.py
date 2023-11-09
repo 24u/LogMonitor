@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 import time
 
-# version 1.0.9.0
+# version 1.0.10.0
 
 ########################
 # Emergency mail CONFIG - when some error occures
